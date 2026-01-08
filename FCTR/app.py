@@ -326,6 +326,23 @@ def init_db():
         """
     )
 
+    # Create default admin user if no users exist
+    cur.execute("SELECT COUNT(*) as count FROM users")
+    user_count = cur.fetchone()[0]
+    if user_count == 0:
+        from werkzeug.security import generate_password_hash
+        default_password = "adminVSB2001."  # Cambiar en producción
+        password_hash = generate_password_hash(default_password)
+        try:
+            cur.execute(
+                "INSERT INTO users (username, password_hash) VALUES (?, ?)",
+                ("admin", password_hash)
+            )
+            print("[INFO] Usuario por defecto creado: admin / adminVSB2001.")
+            print("[ADVERTENCIA] Cambia la contraseña por defecto en producción!")
+        except sqlite3.IntegrityError:
+            pass  # User already exists
+
     conn.commit()
     conn.close()
 
