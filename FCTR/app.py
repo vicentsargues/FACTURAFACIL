@@ -71,7 +71,7 @@ def create_app():
         
         if request.method == "POST":
             username = request.form.get("username", "").strip()
-            password = request.form.get("password", "")
+            password = request.form.get("password", "").strip()
             
             if not username or not password:
                 flash("Usuario y contraseña son obligatorios.", "error")
@@ -82,9 +82,17 @@ def create_app():
                 "SELECT id, username, password_hash FROM users WHERE username = ?",
                 (username,)
             ).fetchone()
+            
+            if not user:
+                conn.close()
+                flash("Usuario o contraseña incorrectos.", "error")
+                return render_template("login.html")
+            
+            # Verificar contraseña
+            password_valid = check_password_hash(user["password_hash"], password)
             conn.close()
             
-            if user and check_password_hash(user["password_hash"], password):
+            if password_valid:
                 session["user_id"] = user["id"]
                 session["username"] = user["username"]
                 flash("Sesión iniciada correctamente.", "success")
