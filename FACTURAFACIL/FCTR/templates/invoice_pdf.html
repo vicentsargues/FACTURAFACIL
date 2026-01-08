@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Factura #{{ invoice.id }}{% endblock %}
+
+{% block content %}
+<section class="card">
+    <header class="invoice-header">
+        <div>
+            <h2>Factura #{{ invoice.id }}</h2>
+            <p>Fecha: {{ invoice.date }}</p>
+        </div>
+        <div class="invoice-actions">
+            <a class="btn-primary" href="{{ url_for('download_invoice_pdf', invoice_id=invoice.id) }}">Descargar PDF</a>
+        </div>
+    </header>
+
+    <section class="invoice-client">
+        <h3>Cliente</h3>
+        <p><strong>{{ invoice.client_name }}</strong></p>
+        {% if invoice.get('client_tax_id') %}
+        <p>CIF/NIF: {{ invoice.client_tax_id }}</p>
+        {% endif %}
+        {% if invoice.get('client_address') %}
+        <p>{{ invoice.client_address }}</p>
+        {% endif %}
+        {% if invoice.get('client_city') or invoice.get('client_province') %}
+        <p>
+            {% if invoice.get('client_city') %}{{ invoice.client_city }}{% endif %}
+            {% if invoice.get('client_province') %} {{ invoice.client_province }}{% endif %}
+        </p>
+        {% endif %}
+        <p>{{ invoice.client_email }}</p>
+    </section>
+
+    <section class="invoice-items">
+        <h3>Conceptos</h3>
+        <table>
+            <thead>
+            <tr>
+                <th>Descripción</th>
+                <th class="text-right">Importe</th>
+            </tr>
+            </thead>
+            <tbody>
+            {% for item in invoice['items'] %}
+                <tr>
+                    <td>{{ item.description }}</td>
+                    <td class="text-right">{{ "%.2f"|format(item.price) }} €</td>
+                </tr>
+            {% endfor %}
+            </tbody>
+        </table>
+    </section>
+
+    <section class="invoice-totals">
+        <div class="totals-box">
+            <div class="totals-row">
+                <span>Subtotal</span>
+                <span>{{ "%.2f"|format(invoice.subtotal) }} €</span>
+            </div>
+            <div class="totals-row">
+                <span>IVA</span>
+                <span>{{ "%.2f"|format(invoice.vat) }} €</span>
+            </div>
+            <div class="totals-row total">
+                <span>Total</span>
+                <span>{{ "%.2f"|format(invoice.total) }} €</span>
+            </div>
+        </div>
+    </section>
+</section>
+{% endblock %}
+
+
