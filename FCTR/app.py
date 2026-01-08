@@ -7,7 +7,9 @@ from io import BytesIO
 import smtplib
 from email.message import EmailMessage
 
-from flask import Flask, render_template, request, redirect, url_for, send_file, flash
+from flask import Flask, render_template, request, redirect, url_for, send_file, flash, session
+from werkzeug.security import generate_password_hash, check_password_hash
+from functools import wraps
 from reportlab.lib.pagesizes import A4
 from reportlab.pdfgen import canvas
 from reportlab.lib.units import mm
@@ -32,7 +34,7 @@ DEFAULT_CONFIG = {
 def create_app():
     # Create Flask app
     app = Flask(__name__)
-    app.secret_key = os.environ.get("APP_SECRET_KEY", "change-me")  # Simple secret for flashes
+    app.secret_key = os.environ.get("APP_SECRET_KEY", "change-me-in-production-use-strong-random-key")  # Simple secret for flashes
 
     # Ensure folders exist
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
@@ -45,12 +47,63 @@ def create_app():
     # Load company info (issuer) from config file
     app.config["COMPANY_INFO"] = load_company_info()
 
+    # Decorator to require login
+    def login_required(f):
+        @wraps(f)
+        def decorated_function(*args, **kwargs):
+            if not session.get("user_id"):
+                flash("Debes iniciar sesión para acceder a esta página.", "error")
+                return redirect(url_for("login"))
+            return f(*args, **kwargs)
+        return decorated_function
+
     @app.route("/")
     def index():
-        # Redirect to new invoice form
+        # Redirect to login if not authenticated, otherwise to new invoice form
+        if not session.get("user_id"):
+            return redirect(url_for("login"))
         return redirect(url_for("new_invoice"))
 
+    @app.route("/login", methods=["GET", "POST"])
+    def login():
+        if session.get("user_id"):
+            return redirect(url_for("new_invoice"))
+        
+        if request.method == "POST":
+            username = request.form.get("username", "").strip()
+            password = request.form.get("password", "")
+            
+            if not username or not password:
+                flash("Usuario y contraseña son obligatorios.", "error")
+                return render_template("login.html")
+            
+            conn = get_db()
+            user = conn.execute(
+                "SELECT id, username, password_hash FROM users WHERE username = ?",
+                (username,)
+            ).fetchone()
+            conn.close()
+            
+            if user and check_password_hash(user["password_hash"], password):
+                session["user_id"] = user["id"]
+                session["username"] = user["username"]
+                flash("Sesión iniciada correctamente.", "success")
+                return redirect(url_for("new_invoice"))
+            else:
+                flash("Usuario o contraseña incorrectos.", "error")
+                return render_template("login.html")
+        
+        return render_template("login.html")
+
+    @app.route("/logout")
+    @login_required
+    def logout():
+        session.clear()
+        flash("Sesión cerrada correctamente.", "success")
+        return redirect(url_for("login"))
+
     @app.route("/invoice/new", methods=["GET", "POST"])
+    @login_required
     def new_invoice():
         conn = get_db()
         clients = conn.execute(
@@ -173,6 +226,7 @@ def create_app():
         return render_template("invoice_form.html", clients=clients, clients_data=clients_data)
 
     @app.route("/invoice/<int:invoice_id>")
+    @login_required
     def view_invoice(invoice_id):
         conn = get_db()
         invoice = get_invoice(conn, invoice_id)
@@ -185,6 +239,7 @@ def create_app():
         )
 
     @app.route("/invoice/<int:invoice_id>/pdf")
+    @login_required
     def download_invoice_pdf(invoice_id):
         pdf_path = PDF_DIR / f"invoice_{invoice_id}.pdf"
         if not pdf_path.exists():
@@ -255,6 +310,18 @@ def init_db():
             description TEXT NOT NULL,
             price REAL NOT NULL,
             FOREIGN KEY (invoice_id) REFERENCES invoices(id)
+        )
+        """
+    )
+
+    # Create users table for authentication
+    cur.execute(
+        """
+        CREATE TABLE IF NOT EXISTS users (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            username TEXT NOT NULL UNIQUE,
+            password_hash TEXT NOT NULL,
+            created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
         )
         """
     )
@@ -513,5 +580,6 @@ if __name__ == "__main__":
     os.environ["SMTP_PASSWORD"] = "bjreekvxnzgndfvv" # Tu contraseña de aplicación
     
     app = create_app()
-    app.run(host="0.0.0.0", port=5000, debug=True)
+    # Permite cambiar el puerto por variable de entorno (PORT), por defecto 5000.
+    app.run(host="0.0.0.0", port=int(os.environ.get("PORT", "5000")), debug=True)
 

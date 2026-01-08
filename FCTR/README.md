@@ -5,12 +5,13 @@ Aplicación web mínima para crear facturas en PDF y enviarlas por email desde u
 ## Estructura
 
 - `app.py`: aplicación Flask + lógica de facturas, SQLite, PDF y envío SMTP.
-- `templates/`: plantillas HTML (`base.html`, `invoice_form.html`, `invoice_pdf.html`).
+- `templates/`: plantillas HTML (`base.html`, `invoice_form.html`, `invoice_pdf.html`, `login.html`).
 - `static/styles.css`: estilos sencillos y responsive.
 - `database/`: carpeta donde se crea automáticamente `invoices.db`.
 - `generated_invoices/`: PDFs generados.
 - `requirements.txt`: dependencias Python.
 - `Dockerfile`: imagen única para todo.
+- `create_user.py`: script para crear usuarios en la base de datos.
 
 ## Variables de entorno
 
@@ -41,5 +42,28 @@ docker run -d \
 ```
 
 Luego abre `http://localhost:5000` en el navegador.
+
+## Autenticación
+
+La aplicación requiere iniciar sesión para acceder. Todas las rutas están protegidas.
+
+### Crear un usuario
+
+Antes de usar la aplicación, debes crear al menos un usuario:
+
+```bash
+python create_user.py <username> <password>
+```
+
+Ejemplo:
+```bash
+python create_user.py admin mi_password_seguro
+```
+
+**Nota:** Asegúrate de que la base de datos ya existe (ejecuta la aplicación una vez antes de crear usuarios).
+
+### Iniciar sesión
+
+Una vez creado el usuario, accede a `http://localhost:5000` y serás redirigido al formulario de login. Introduce tu usuario y contraseña para acceder a la aplicación.
 
 
