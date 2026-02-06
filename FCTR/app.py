@@ -601,8 +601,8 @@ if __name__ == "__main__":
     # CONFIGURACIÓN DE TU CUENTA GMAIL
     os.environ["SMTP_HOST"] = "smtp.gmail.com"
     os.environ["SMTP_PORT"] = "587"
-    os.environ["SMTP_USER"] = "vicentsargues@gmail.com"
-    os.environ["SMTP_PASSWORD"] = "bjreekvxnzgndfvv" # Tu contraseña de aplicación
+    os.environ["SMTP_USER"] = "reparaciones.monterde@gmail.com"
+    os.environ["SMTP_PASSWORD"] = "nqzrnzoaemezhnf" # Tu contraseña de aplicación
     
     app = create_app()
     # Permite cambiar el puerto por variable de entorno (PORT), por defecto 5000.
